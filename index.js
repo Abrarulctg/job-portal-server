@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 
 const port = process.env.PORT || 5000;
@@ -10,13 +11,17 @@ require("dotenv").config();
 
 //Middleware
 app.use(cors(
-    {
-        origin: ['http://localhost:5174/'],
-        credentials: true
-    }
+    // {
+    //     origin: ['http://localhost:5174/'],
+    //     credentials: true
+    // }
 ))
 app.use(express.json());
-// app.use(cookieParser());
+app.use(cookieParser());
+
+//Custom Middlware 
+
+
 
 
 //Mongo Reletaed API Started
@@ -40,6 +45,25 @@ async function run() {
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
+        //Collection name from MongoDB
+        const jobsCollection = client.db('jobPortalDB').collection('jobs')
+        // const appliedJobsCollection = client.db('jobPortalDB').collection('appliedJobs')
+
+
+        //Jobs Api
+        app.get('/jobs', async (req, res) => {
+            const cursor = jobsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result)
+        })
+
+        //Post a job
+        app.post('/jobs', async (req, res) => {
+            const newJob = req.body;
+            console.log(newJob);
+            const result = await jobsCollection.insertOne(newJob);
+            res.send(result);
+        })
 
 
     } finally {
