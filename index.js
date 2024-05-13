@@ -90,7 +90,7 @@ async function run() {
                     why_work_with_us: updatedJob.job_responsibilities,
                     application_deadline: updatedJob.application_deadline,
                     posting_date: updatedJob.posting_date,
-                    salaryRange: updatedJob.salaryRange
+                    salary_range: updatedJob.salary_range
                 }
             }
             const result = await jobsCollection.updateOne(filter, job, options);
@@ -99,6 +99,13 @@ async function run() {
         })
 
 
+        //Delete a job
+        app.delete("/job/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await jobsCollection.deleteOne(query);
+            res.send(result);
+        })
 
     } finally {
         // Ensures that the client will close when you finish/error
