@@ -74,6 +74,31 @@ async function run() {
         })
 
 
+        //Update job
+        app.put('/job/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedJob = req.body;
+            const job = {
+                $set: {
+                    job_banner: updatedJob.job_banner,
+                    job_title: updatedJob.job_title,
+                    job_category: updatedJob.job_category,
+                    job_description: updatedJob.job_description,
+                    job_responsibilities: updatedJob.job_responsibilities,
+                    why_work_with_us: updatedJob.job_responsibilities,
+                    application_deadline: updatedJob.application_deadline,
+                    posting_date: updatedJob.posting_date,
+                    salaryRange: updatedJob.salaryRange
+                }
+            }
+            const result = await jobsCollection.updateOne(filter, job, options);
+            console.log(updatedJob)
+            res.send(result);
+        })
+
+
 
     } finally {
         // Ensures that the client will close when you finish/error
