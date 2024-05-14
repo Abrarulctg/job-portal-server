@@ -107,20 +107,67 @@ async function run() {
             res.send(result);
         })
 
-        //Apply job api's
 
-        //get job Api
+
+
+        //Apply job api's
+        async function convertApplicantNumberToNumber() {
+            const cursor = jobsCollection.find({ applicants_number: { $type: 'string' } });
+            const jobsToUpdate = await cursor.toArray();
+            const updatePromise = jobsToUpdate.map(async (job) => {
+                const jobId = job._id;
+                const numericApplicantsNumber = parseInt(job.applicants_number);
+                if (!isNaN(numericApplicantsNumber)) {
+                    await jobsCollection.updateOne(
+                        { _id: jobId },
+                        { $set: { applicants_number: numericApplicantsNumber } }
+                    );
+                }
+            });
+            await Promise.all(updatePromise);
+            console.log("conversion seccessfull!");
+        }
+
+
+        //get applied job Api
         app.get('/appliedJobs', async (req, res) => {
             const cursor = appliedJobsCollection.find();
             const result = await cursor.toArray();
             res.send(result)
         })
 
-        //Post a job
-        app.post('/appliedJobs', async (req, res) => {
-            const newJob = req.body;
-            console.log(newJob);
-            const result = await appliedJobsCollection.insertOne(newJob);
+        //apply a job
+        // app.post('/appliedJobs', async (req, res) => {
+        //     const newJob = req.body;
+        //     console.log(newJob);
+        //     const jobId = newJob.jobId;
+        //     try {
+        //         await convertApplicantNumberToNumber();
+        //         const result = await jobsCollection.updateOne(
+        //             { _id: jobId },
+        //             { $inc: { applicants_number: 1 } }
+        //         );
+        //         if (result.modifiedCount === 1) {
+        //             const appliedJobResult = await appliedJobsCollection.insertOne(newJob);
+        //             res.send(appliedJobResult);
+        //         }
+        //         else {
+        //             res.status(500).send({ error: "Failed to update applicants_number" });
+        //         }
+        //     }
+        //     catch (error) {
+        //         console.error("Error applying for job:", error);
+        //         res.status(500).send({ error: "An error occured while applying for the job" });
+        //     }
+        //     // const result = await appliedJobsCollection.insertOne(newJob);
+        //     // res.send(result);
+        // })
+
+        //APPLY A JOB
+        app.post('/applyJob', async (req, res) => {
+            const applyJob = req.body;
+            console.log("Showing Received data from /applyJob Route:", applyJob);
+            const result = await appliedJobsCollection.insertOne(applyJob);
             res.send(result);
         })
 
