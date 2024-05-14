@@ -47,7 +47,7 @@ async function run() {
 
         //Collection name from MongoDB
         const jobsCollection = client.db('jobPortalDB').collection('jobs')
-        // const appliedJobsCollection = client.db('jobPortalDB').collection('appliedJobs')
+        const appliedJobsCollection = client.db('jobPortalDB').collection('appliedJobs')
 
 
         //Jobs Api
@@ -106,6 +106,24 @@ async function run() {
             const result = await jobsCollection.deleteOne(query);
             res.send(result);
         })
+
+        //Apply job api's
+
+        //get job Api
+        app.get('/appliedJobs', async (req, res) => {
+            const cursor = appliedJobsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result)
+        })
+
+        //Post a job
+        app.post('/appliedJobs', async (req, res) => {
+            const newJob = req.body;
+            console.log(newJob);
+            const result = await appliedJobsCollection.insertOne(newJob);
+            res.send(result);
+        })
+
 
     } finally {
         // Ensures that the client will close when you finish/error
