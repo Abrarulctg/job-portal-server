@@ -26,6 +26,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
+//localhost:5000 and localhost:5173 are treated as same site.  so sameSite value must be strict in development server.  in production sameSite will be none
+// in development server secure will false .  in production secure will be true
 
 
 //Custom Middlware 
@@ -68,9 +75,10 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
+
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
         //Collection name from MongoDB
@@ -78,26 +86,24 @@ async function run() {
         const appliedJobsCollection = client.db('jobPortalDB').collection('appliedJobs')
 
         //Auth Releted API
-        app.post('/jwt', logger, async (req, res) => {
-            const user = req.body;
-            console.log("user for token", user);
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-                expiresIn: '5hr'
-            })
-
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'none'
-            })
-            res.send({ success: true });
-        })
-
-        app.post('/logout', async (req, res) => {
-            const user = req.body;
-            console.log('logging out', user);
-            res.clearCookie('token', { maxAge: 0 }).send({ success: true });
-        })
+        // app.post('/jwt', logger, async (req, res) => {
+        //     const user = req.body;
+        //     console.log("user for token", user);
+        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        //         expiresIn: '5hr'
+        //     })
+        //     res.cookie('token', token, {
+        //         httpOnly: true,
+        //         secure: true,
+        //         sameSite: 'none'
+        //     })
+        //     res.send({ success: true });
+        // })
+        // app.post('/logout', async (req, res) => {
+        //     const user = req.body;
+        //     console.log('logging out', user);
+        //     res.clearCookie('token', { maxAge: 0 }).send({ success: true });
+        // })
 
 
         // app.post('/logout', async (req, res) => {
@@ -105,6 +111,26 @@ async function run() {
         //     console.log("logging out", user);
         //     res.clearCookie('token', { maxAge: 0 }.send({ success: true }))
         // })
+
+        //creating Token
+        app.post("/jwt", logger, async (req, res) => {
+            const user = req.body;
+            console.log("user for token", user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+
+            res.cookie("token", token, cookieOptions).send({ success: true });
+        });
+
+        //clearing Token
+        app.post("/logout", async (req, res) => {
+            const user = req.body;
+            console.log("logging out", user);
+            res
+                .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+                .send({ success: true });
+        });
+
+
 
 
         //Jobs Api
