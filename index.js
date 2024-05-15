@@ -136,40 +136,36 @@ async function run() {
             res.send(result)
         })
 
-        //apply a job
-        // app.post('/appliedJobs', async (req, res) => {
-        //     const newJob = req.body;
-        //     console.log(newJob);
-        //     const jobId = newJob.jobId;
-        //     try {
-        //         await convertApplicantNumberToNumber();
-        //         const result = await jobsCollection.updateOne(
-        //             { _id: jobId },
-        //             { $inc: { applicants_number: 1 } }
-        //         );
-        //         if (result.modifiedCount === 1) {
-        //             const appliedJobResult = await appliedJobsCollection.insertOne(newJob);
-        //             res.send(appliedJobResult);
-        //         }
-        //         else {
-        //             res.status(500).send({ error: "Failed to update applicants_number" });
-        //         }
-        //     }
-        //     catch (error) {
-        //         console.error("Error applying for job:", error);
-        //         res.status(500).send({ error: "An error occured while applying for the job" });
-        //     }
-        //     // const result = await appliedJobsCollection.insertOne(newJob);
-        //     // res.send(result);
-        // })
 
-        //APPLY A JOB
+        //APPLY A JOB  // trying $inc
         app.post('/applyJob', async (req, res) => {
             const applyJob = req.body;
+
+            const jobId = applyJob.jobId;
+
+            const reslt = await jobsCollection.updateOne(
+                { _id: new ObjectId(jobId) },
+                { $inc: { applicants_number: 1 } }
+            );
+            if (reslt.modifiedCount === 1) {
+                console.log("Update operation success")
+            } else {
+                console.log("Update operation failed")
+            }
+
             console.log("Showing Received data from /applyJob Route:", applyJob);
             const result = await appliedJobsCollection.insertOne(applyJob);
             res.send(result);
         })
+
+
+        //APPLY A JOB //Code working fine
+        // app.post('/applyJob', async (req, res) => {
+        //     const applyJob = req.body;
+        //     console.log("Showing Received data from /applyJob Route:", applyJob);
+        //     const result = await appliedJobsCollection.insertOne(applyJob);
+        //     res.send(result);
+        // })
 
 
     } finally {
