@@ -11,16 +11,44 @@ require("dotenv").config();
 
 //Middleware
 app.use(cors(
-    // {
-    //     origin: ['http://localhost:5174/'],
-    //     credentials: true
-    // }
-))
+    {
+        origin: [
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://localhost:5000',
+            'https://job-portal-abrar.netlify.app'
+
+        ],
+        credentials: true
+    }
+));
 app.use(express.json());
 app.use(cookieParser());
 
-//Custom Middlware 
 
+
+
+//Custom Middlware 
+const logger = (req, res, next) => {
+    console.log("log: info", req.method, req.url);
+    next();
+}
+
+const verifyToken = (req, res, next) => {
+    const token = req?.cookies?.token;
+    console.log("token in the middleware: ", token);
+
+    if (!token) {
+        return res.status(401).send({ message: "Unauthorized Access" });
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "Unauthorized access" })
+        }
+        req.user = decoded;
+        next();
+    })
+}
 
 
 
@@ -49,16 +77,45 @@ async function run() {
         const jobsCollection = client.db('jobPortalDB').collection('jobs')
         const appliedJobsCollection = client.db('jobPortalDB').collection('appliedJobs')
 
+        //Auth Releted API
+        app.post('/jwt', logger, async (req, res) => {
+            const user = req.body;
+            console.log("user for token", user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '5hr'
+            })
+
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
+            })
+            res.send({ success: true });
+        })
+
+        app.post('/logout', async (req, res) => {
+            const user = req.body;
+            console.log('logging out', user);
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true });
+        })
+
+
+        // app.post('/logout', async (req, res) => {
+        //     const user = req.body;
+        //     console.log("logging out", user);
+        //     res.clearCookie('token', { maxAge: 0 }.send({ success: true }))
+        // })
+
 
         //Jobs Api
-        app.get('/jobs', async (req, res) => {
+        app.get('/jobs', logger, async (req, res) => {
             const cursor = jobsCollection.find();
             const result = await cursor.toArray();
             res.send(result)
         })
 
         //find job by id
-        app.get('/job/:id', async (req, res) => {
+        app.get('/job/:id', logger, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await jobsCollection.findOne(query);
@@ -66,7 +123,7 @@ async function run() {
         })
 
         //Post a job
-        app.post('/jobs', async (req, res) => {
+        app.post('/jobs', logger, async (req, res) => {
             const newJob = req.body;
             console.log(newJob);
             const result = await jobsCollection.insertOne(newJob);
@@ -100,7 +157,7 @@ async function run() {
 
 
         //Delete a job
-        app.delete("/job/:id", async (req, res) => {
+        app.delete("/job/:id", logger, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await jobsCollection.deleteOne(query);
@@ -110,7 +167,7 @@ async function run() {
 
 
         //Pagination releted api
-        app.get('/pagedJobs', async (req, res) => {
+        app.get('/pagedJobs', logger, async (req, res) => {
             const page = parseInt(req.query.page);
             const size = parseInt(req.query.size);
             console.log("Pagination query", req.query);
@@ -131,7 +188,8 @@ async function run() {
 
 
 
-        //Apply job api's
+        //Apply job releted api's 
+        // Convert applicant_number field to string to number
         async function convertApplicantNumberToNumber() {
             const cursor = jobsCollection.find({ applicants_number: { $type: 'string' } });
             const jobsToUpdate = await cursor.toArray();
@@ -151,7 +209,19 @@ async function run() {
 
 
         //get applied job Api
-        app.get('/appliedJobs', async (req, res) => {
+        app.get('/appliedJobs', logger, async (req, res) => {
+            console.log(req.query.email) //Consoling users emails on server terminal
+            // console.log("from in the valid token", req.user)
+            console.log(req.cookies)
+            if (req.query?.email !== req.user?.email) {
+                return res.status(403).send({ message: "Forbidden Access" })
+            }
+            let query = {};
+            if (req.query?.email) {
+                query = { email: req.query.email };
+            }
+            console.log(query)
+
             const cursor = appliedJobsCollection.find();
             const result = await cursor.toArray();
             res.send(result)
@@ -159,7 +229,7 @@ async function run() {
 
 
 
-        //APPLY A JOB  // trying $inc
+        //APPLY A JOB  // trying $inc to update Applicant_number field
         app.post('/applyJob', async (req, res) => {
             const applyJob = req.body;
 
@@ -181,7 +251,7 @@ async function run() {
         })
 
 
-        //APPLY A JOB //Code working fine
+        //APPLY A JOB // WITHOUT updating applicant_number field
         // app.post('/applyJob', async (req, res) => {
         //     const applyJob = req.body;
         //     console.log("Showing Received data from /applyJob Route:", applyJob);
