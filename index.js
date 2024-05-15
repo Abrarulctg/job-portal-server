@@ -109,6 +109,27 @@ async function run() {
 
 
 
+        //Pagination releted api
+        app.get('/pagedJobs', async (req, res) => {
+            const page = parseInt(req.query.page);
+            const size = parseInt(req.query.size);
+            console.log("Pagination query", req.query);
+            const result = await jobsCollection.find()
+                .skip(page * size) //skip means data to be skiped till the res
+                .limit(size) // limit is use for to show qty of size
+                .toArray();
+            res.send(result);
+        })
+
+
+        //getting total job count
+        app.get('/jobCount', async (req, res) => {
+            const count = await jobsCollection.estimatedDocumentCount();
+            res.send({ count });
+        })
+
+
+
 
         //Apply job api's
         async function convertApplicantNumberToNumber() {
@@ -137,12 +158,13 @@ async function run() {
         })
 
 
+
         //APPLY A JOB  // trying $inc
         app.post('/applyJob', async (req, res) => {
             const applyJob = req.body;
 
             const jobId = applyJob.jobId;
-
+            await convertApplicantNumberToNumber();
             const reslt = await jobsCollection.updateOne(
                 { _id: new ObjectId(jobId) },
                 { $inc: { applicants_number: 1 } }
